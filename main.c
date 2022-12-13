@@ -55,14 +55,50 @@
 #endif
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <getopt.h>
 
 const char *get_platform_name();
+void print_usage_and_quit(char *application_name);
 
-int main(void) {
+int main(int argc, char *argv[]) {
+    // prints platform
     puts(get_platform_name());
+
+    // flag checker for command line option
+    int network = 0, file = 0, option = 0;
+
+    // option value
+    char *option_input;
+
+    // parse command line options until option == -1 (no more options)
+    while((option = getopt(argc, argv,"sn:f:")) != -1){
+        switch(option){
+            case 'n':
+                network = 1;
+                option_input = optarg;
+                break;
+            case 'f':
+                file = 1;
+                option_input = optarg;
+                break;
+            default: print_usage_and_quit(argv[0]);
+        }
+    }
+
+    // both or neither options are given, not permitted
+    if(network == file){
+        print_usage_and_quit(argv[0]);
+    }
+
     return 0;
 }
 
 const char *get_platform_name() {
     return (PLATFORM_NAME == NULL) ? "" : PLATFORM_NAME;
+}
+
+void print_usage_and_quit(char *application_name){
+    printf("Usage: %s [-n ip-address | -f output-file]\n", application_name);
+    exit(1);
 }
