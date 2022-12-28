@@ -49,6 +49,7 @@
 #if defined(PLATFORM_LINUX)
     #include <linux/input.h>
     #include <signal.h>
+    #include <sys/ioctl.h>
     #define INPUT_DIR "/dev/input/"
 
     int eventSize = sizeof(struct input_event);

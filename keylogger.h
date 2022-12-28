@@ -62,8 +62,6 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <dirent.h>
-#include <sys/ioctl.h>
-#include <linux/input.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
