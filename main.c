@@ -42,11 +42,19 @@ int main(int argc, char *argv[]) {
         }
     }
     else if(network){
-        writeout = fdopen(get_socket_file_descriptor(option_input, PORT), "ab+");
-        if(writeout < 0){
-            printf("Error creating socket on %s\n", option_input);
-            return 1;
-        }
+        #ifdef PLATFORM_LINUX
+            writeout = fdopen(get_socket_file_descriptor((char*)option_input, PORT), "ab+");
+            printf("socket connesso");
+            if(writeout < 0){
+                printf("Error creating socket on %s\n", option_input);
+                return 1;
+            }
+        #endif
+
+        #ifdef PLATFORM_WINDOWS
+            remotelogger(get_socket_file_descriptor((char*)option_input, PORT));
+            return 0;
+        #endif
     }
 
     #if defined(PLATFORM_LINUX)

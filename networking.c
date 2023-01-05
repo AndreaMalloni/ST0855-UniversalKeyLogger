@@ -106,3 +106,39 @@
     }
 #endif
 
+#if defined(PLATFORM_WINDOWS)
+    #include <winsock2.h>
+    int get_socket_file_descriptor(char *hostname, char *port) {
+        WSADATA wsa;
+        SOCKET s;
+        struct sockaddr_in server;
+
+        printf("\nInitialising Winsock...\n");
+        if (WSAStartup(MAKEWORD(2,2),&wsa) != 0) {
+            printf("Failed. Error Code : %d",WSAGetLastError());
+            return 1;
+        }
+
+        printf("Initialised.\n");
+
+        if((s = socket(AF_INET , SOCK_STREAM , 0 )) == INVALID_SOCKET) {
+            printf("Could not create socket : %d" , WSAGetLastError());
+        }
+
+        printf("Socket created.\n");
+
+        server.sin_addr.s_addr = inet_addr(hostname);
+        server.sin_family = AF_INET;
+        server.sin_port = htons( 3491 );
+
+        //Connect to remote server
+        if (connect(s , (struct sockaddr *)&server , sizeof(server)) < 0) {
+            printf("Could not connect to server : %d" , WSAGetLastError());
+            return 1;
+        }
+
+        puts("Connected\n");
+        return s;
+    }
+#endif
+

