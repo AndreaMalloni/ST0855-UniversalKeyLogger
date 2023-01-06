@@ -312,7 +312,7 @@ void setSessionEndLog() {
         signal(SIGTERM, quitHandler);
 
         setSessionStartLog();
-        fprintf(writeout, string_buffer);
+        fprintf(writeout, "%s", string_buffer);
 
         while(running){
             bytesRead = read(keyboard, events, eventSize * NUM_EVENTS);
@@ -321,14 +321,14 @@ void setSessionEndLog() {
                 if(events[i].type == EV_KEY){
                     if(events[i].value == 1){
                         convert(events[i].code);
-                        fprintf(writeout, string_buffer);
+                        fprintf(writeout, "%s", string_buffer);
                     }
                 }
             }
         }
 
         setSessionEndLog();
-        fprintf(writeout, string_buffer);
+        fprintf(writeout, "%s", string_buffer);
     }
 #endif
 
