@@ -17,9 +17,6 @@ const char *parse_options(int argc, char *argv[]);
 int network = 0, file = 0;
 
 int main(int argc, char *argv[]) {
-    // prints platform
-    puts(get_platform_name());
-
     // output file descriptor
     FILE* writeout;
 
@@ -31,16 +28,17 @@ int main(int argc, char *argv[]) {
     if(network == file) {
         print_usage_and_quit(argv[0]);
     }
+    // local log file option
     else if(file) {
         if((writeout = fopen(option_input, "ab+")) < 0){
             printf("Error opening file %s: %s\n", argv[2], strerror(errno));
             return 1;
         }
     }
+    // remote log option
     else if(network){
         #ifdef PLATFORM_LINUX
             writeout = fdopen(get_socket_file_descriptor((char*)option_input, PORT), "ab+");
-            printf("socket connesso");
             if(writeout < 0){
                 printf("Error creating socket on %s\n", option_input);
                 return 1;
