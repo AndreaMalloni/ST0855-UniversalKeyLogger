@@ -108,26 +108,62 @@
 
 #if defined(PLATFORM_WINDOWS)
     #include <winsock2.h>
+
+    struct in_addr resolveDNS(char *hostname) {
+        int i = 0;
+        struct in_addr addr;
+        struct hostent *remoteHost;
+
+        remoteHost = gethostbyname(hostname);
+
+        if (remoteHost == NULL) {
+            DWORD dwError = WSAGetLastError();
+            if (dwError != 0) {
+                if (dwError == WSAHOST_NOT_FOUND) {
+                    printf("Host not found\n");
+                    return addr;
+                } else if (dwError == WSANO_DATA) {
+                    printf("No data record found\n");
+                    return addr;
+                } else {
+                    printf("Function failed with error: %ld\n", dwError);
+                    return addr;
+                }
+            }
+        } else {
+            if (remoteHost->h_addrtype == AF_INET) {
+                while (remoteHost->h_addr_list[i] != 0) {
+                    addr.s_addr = *(u_long *) remoteHost->h_addr_list[i++];
+                }
+            } else if (remoteHost->h_addrtype == AF_INET6) {
+                printf("\tRemotehost is an IPv6 address\n");
+                return addr;
+            }
+        }
+
+        return addr;
+    }
+
     int get_socket_file_descriptor(char *hostname, char *port) {
         WSADATA wsa;
         SOCKET s;
         struct sockaddr_in server;
 
-        printf("\nInitialising Winsock...\n");
         if (WSAStartup(MAKEWORD(2,2),&wsa) != 0) {
             printf("Failed. Error Code : %d",WSAGetLastError());
             return 1;
         }
 
-        printf("Initialised.\n");
-
         if((s = socket(AF_INET , SOCK_STREAM , 0 )) == INVALID_SOCKET) {
             printf("Could not create socket : %d" , WSAGetLastError());
         }
 
-        printf("Socket created.\n");
+        if(isalpha(hostname[0])) {
+            server.sin_addr = resolveDNS(hostname);
+        } else {
+            server.sin_addr.s_addr = inet_addr(hostname);
+        }
 
-        server.sin_addr.s_addr = inet_addr(hostname);
         server.sin_family = AF_INET;
         server.sin_port = htons( 3491 );
 
@@ -137,7 +173,6 @@
             return 1;
         }
 
-        puts("Connected\n");
         return s;
     }
 #endif

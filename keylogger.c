@@ -20,8 +20,10 @@ void setSessionStartLog() {
     char* codec;
     time_t t = time(NULL);
     struct tm tm = *localtime(&t);
+    memset(string_buffer, 0, 256);
 
-    #if defined PLATFORM_WINDOWS
+
+#if defined PLATFORM_WINDOWS
         platform = "WINDOWS";
         codec = "unicode";
     #endif
@@ -46,6 +48,7 @@ void setSessionStartLog() {
 void setSessionEndLog() {
     time_t t = time(NULL);
     struct tm tm = *localtime(&t);
+    memset(string_buffer, 0, 256);
 
     sprintf(string_buffer,
             "\nLOGGING SESSION END: %d-%02d-%02d %02d:%02d:%02d",
@@ -176,7 +179,9 @@ void setSessionEndLog() {
                 }
             }
             searchActiveWindow();
-            Sleep(10); /* previene la saturazione della CPU */
+
+            /* previene la saturazione della CPU */
+            Sleep(10);
         }
 
         setSessionEndLog();
